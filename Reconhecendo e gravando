@@ -1,0 +1,62 @@
+import sounddevice as sd
+import numpy as np
+import wave
+import time
+import speech_recognition as sr
+
+trigger_phrases = ["caçada ao ap", "palavra chave", "a maior promoção do rádio"]  
+
+
+def gravar_audio(duracao, arquivo_saida):
+    fs = 44100  
+    print("Gravando por 1 minuto...")
+    audio = sd.rec(int(duracao * fs), samplerate=fs, channels=2, dtype='int16')
+    sd.wait()  
+    print("Gravação concluída.")
+
+    
+    with wave.open(arquivo_saida, 'wb') as arquivo_wav:
+        arquivo_wav.setnchannels(2)
+        arquivo_wav.setsampwidth(2)
+        arquivo_wav.setframerate(fs)
+        arquivo_wav.writeframes(audio.tobytes())
+
+    print(f"Áudio salvo como {arquivo_saida}")
+
+
+def escutar_frase():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Aguardando a frase de ativação...")
+        while True:  
+            try:
+                audio = recognizer.listen(source, phrase_time_limit=5)  
+                frase = recognizer.recognize_google(audio, language="pt-BR")
+                print(f"Você disse: {frase}")
+                
+               
+                return frase
+            except sr.UnknownValueError:
+                print("Não consegui entender o que foi dito. Continuando...")
+            except sr.RequestError as e:
+                print(f"Erro ao solicitar resultados do serviço de reconhecimento de fala; {e}")
+            except sr.WaitTimeoutError:
+                print("Tempo de espera esgotado. Continuando...")
+
+
+def main():
+    while True:
+        frase = escutar_frase()
+
+        
+        if any(trigger_phrase in frase.lower() for trigger_phrase in trigger_phrases):
+            print(f"Frase de ativação detectada. Iniciando gravação...")
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            arquivo_saida = f"gravacao_{timestamp}.wav"
+            gravar_audio(60, arquivo_saida)
+
+            
+            print("Gravação concluída. Aguardando a próxima frase de ativação...")
+
+if __name__ == "__main__":
+    main()
